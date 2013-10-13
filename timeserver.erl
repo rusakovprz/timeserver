@@ -26,9 +26,9 @@
 
 %% инициализация(При загрузке модуля? или при старте?)
 init([]) -> 
-%	Pid = spawn(?MODULE, gui, []),
-%	register(echoServer, Pid),
-%	{ ok, [] }.
+  Pid = spawn(?MODULE, loop, []),
+  register(echoServer, Pid),
+  { ok, [] }.
 
 %% обрабатывает забросы требуещие ответа
 handle_call(Msg, _From, State) -> 
@@ -72,5 +72,15 @@ stop() ->
 
 %====================================================================================================
 %% @doc Main function of the server
-loop() ->	ok.
-
+loop() ->
+  Port = 1025,
+  Opts = [binary, {packet, 2}, {reuseaddr, true}, {keepalive, true}, {backlog, 30}, {active, false}],
+  case gen_tcp:listen(Port, Opts) of
+    {ok, Listen_socket} ->
+      %%Create first accepting process
+      {ok, Ref} = prim_inet:async_accept(Listen_socket, -1),
+      {ok, state{listener = Listen_socket, acceptor = Ref, module   = Module}};
+    {error, Reason} ->
+      {stop, Reason}
+  end.
+  
