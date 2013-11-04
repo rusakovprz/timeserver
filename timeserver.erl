@@ -21,6 +21,8 @@
 -behavior('gen_server').
 -export([code_change/3, handle_call/3, handle_cast/2, handle_info/2, init/1, terminate/2]).
 
+-export([loop/0, client/0, server/0]).
+
 %====================================================================================================
 %% The gen_server API (otp) 
 
@@ -38,11 +40,11 @@ handle_call(Msg, _From, State) ->
 handle_cast(stop, State) -> 
     {stop, normal, State};
 
-handle_cast(Msg, State) -> 
+handle_cast(_Msg, State) -> 
 	{noreply, State}.
 
 %% обрабатывает message's
-handle_info(Msg, State) -> 
+handle_info(_Msg, State) -> 
 	{noreply, State}.
 
 %% вызывается когда супервайзер "просит" модуль остановиться
@@ -50,7 +52,7 @@ terminate(_Reason, _State) ->
     ok.    
         
 %% Метод вызываетс перед тем когда нужно обновить код
-code_change(OldVersion, State, Extra)  ->  
+code_change(_OldVersion, State, _Extra)  ->  
 	{ok, State}.
 
 %====================================================================================================
@@ -66,21 +68,28 @@ start() ->
 %% @doc Server break
 %% @spec stop() -> ok
 stop() ->
-    io:format("stop() -> ~n"),
+  io:format("stop() -> ~n"),
 	gen_server:cast(echos, stop).
-	
+
+
+loop() ->
+  io:format("Hello world~n" ),
+  ok.	
 
 %====================================================================================================
-%% @doc Main function of the server
-loop() ->
-  Port = 1025,
-  Opts = [binary, {packet, 2}, {reuseaddr, true}, {keepalive, true}, {backlog, 30}, {active, false}],
-  case gen_tcp:listen(Port, Opts) of
-    {ok, Listen_socket} ->
-      %%Create first accepting process
-      {ok, Ref} = prim_inet:async_accept(Listen_socket, -1),
-      {ok, state{listener = Listen_socket, acceptor = Ref, module   = Module}};
-    {error, Reason} ->
-      {stop, Reason}
-  end.
-  
+%% @doc Test gen_tcp module
+
+client() ->
+    {ok, Sock} = gen_tcp:connect("127.0.0.1", 5678, [list, {packet, 0}]),
+    ok = gen_tcp:send(Sock, "Some Data"),
+    ok = gen_tcp:close(Sock).
+
+
+server() ->
+    {ok, LSock} = gen_tcp:listen(5678, [list, {packet, 0}, {active, false}]),
+    {ok, Sock} = gen_tcp:accept(LSock),
+    {ok, Data} = gen_tcp:recv(Sock, 0),
+    ok = gen_tcp:close(Sock),
+    Data.
+
+
