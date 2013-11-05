@@ -80,24 +80,47 @@ loop() ->
 %% @doc Test gen_tcp module
 
 client() ->
-    {ok, Sock} = gen_tcp:connect("127.0.0.1", 5678, [list, {packet, 0}]),
-    ok = gen_tcp:send(Sock, "Some Data"),
-    ok = gen_tcp:close(Sock).
+  {ok, Sock} = gen_tcp:connect("127.0.0.1", 5678, [list, {packet, 0}, {active, false}]),
+  ok = gen_tcp:send(Sock, "GET"),
+  Data = client_loop(Sock),
+  ok = gen_tcp:close(Sock),
+  Data.
+
+
+client_loop(Sock) ->
+  case gen_tcp:recv(Sock, 0) of
+    {ok, Data} ->
+      Data;
+    {error,einval} ->
+      client_loop(Sock)
+  end. 
 
 
 server() ->
-    {ok, LSock} = gen_tcp:listen(5678, [list, {packet, 0}, {active, false}]),
-    {ok, Sock} = gen_tcp:accept(LSock),
-    {ok, Data} = gen_tcp:recv(Sock, 0),
-    ok = gen_tcp:close(Sock),
-    Data.
+  {ok, LSock} = gen_tcp:listen(5678, [list, {packet, 0}, {active, false}]),
+  {ok, Sock} = gen_tcp:accept(LSock),
+  server_loop(Sock),
+  ok = gen_tcp:close(Sock).
 
-%% Test functions get_time
+
+server_loop(Sock) ->
+  case gen_tcp:recv(Sock, 0) of
+    {ok, "GET"} ->
+      io:format("receive 'GET'~n"),
+      gen_tcp:send(Sock, get_universal_time());
+    {error,closed} ->  
+      closed;
+    Data ->
+      io:format("receive: ~p ~n", [Data] ),
+      server_loop(Sock)             
+  end.
+
+
+%% @doc Test functions get_time
 %% This function returns the Universal Coordinated Time (UTC) reported by the
 %% underlying operating system. Local time is returned if universal
 %% time is not available.
 %% Example returned data: "2013-11-5_9:42:10"
-
 
 get_universal_time() -> 
   DateTime=calendar:universal_time(),
