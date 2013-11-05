@@ -21,7 +21,7 @@
 -behavior('gen_server').
 -export([code_change/3, handle_call/3, handle_cast/2, handle_info/2, init/1, terminate/2]).
 
--export([loop/0, client/0, server/0]).
+-export([loop/0, client/0, server/0, get_universal_time/0]).
 
 %====================================================================================================
 %% The gen_server API (otp) 
@@ -92,4 +92,19 @@ server() ->
     ok = gen_tcp:close(Sock),
     Data.
 
+%% Test functions get_time
+%% This function returns the Universal Coordinated Time (UTC) reported by the
+%% underlying operating system. Local time is returned if universal
+%% time is not available.
+%% Example returned data: "2013-11-5_9:42:10"
+
+
+get_universal_time() -> 
+  DateTime=calendar:universal_time(),
+  {Date,Time} = DateTime,
+  {Year,Month,Day} = Date,
+  {Hours,Minutes,Seconds} = Time,
+  integer_to_list(Year) ++ "-" ++ integer_to_list(Month) ++ "-" ++ 
+  integer_to_list(Day) ++ "_" ++ integer_to_list(Hours) ++ ":" ++ 
+  integer_to_list(Minutes) ++ ":" ++ integer_to_list(Seconds).
 
