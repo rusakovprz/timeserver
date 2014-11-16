@@ -21,24 +21,31 @@
 -behavior('gen_server').
 -export([code_change/3, handle_call/3, handle_cast/2, handle_info/2, init/1, terminate/2]).
 
--export([loop/0, client/0, server/0, get_universal_time/0]).
+-export([loop/1, client/0, server/0, get_universal_time/0]).
 
 %====================================================================================================
 %% The gen_server API (otp) 
 
-%% инициализация(При загрузке модуля? или при старте?)
-init([]) -> 
-  Pid = spawn(?MODULE, loop, []),
-  register(echoServer, Pid),
-  { ok, [] }.
+%% Инициализация(При старте сервера)
+init([]) ->
+  io:format("time server is started.~n"), 
+  { ok, state }.
 
-%% обрабатывает забросы требуещие ответа
+%% Обрабатывает забросы требуещие ответа
+handle_call({cmd, getTime}, _From, State) -> 
+  Time = get_universal_time(),
+	{reply, Time,  State};
+	
 handle_call(Msg, _From, State) -> 
 	{reply, Msg,  State}.
 
 %% обрабатывает забросы НЕ требуещие ответа
 handle_cast(stop, State) -> 
     {stop, normal, State};
+
+handle_cast({cmd, loop, Counter}, State) -> 
+    loop(Counter),
+    {noreply, State};
 
 handle_cast(_Msg, State) -> 
 	{noreply, State}.
@@ -48,10 +55,11 @@ handle_info(_Msg, State) ->
 	{noreply, State}.
 
 %% вызывается когда супервайзер "просит" модуль остановиться
-terminate(_Reason, _State) -> 
-    ok.    
+terminate(_Reason, _State) ->
+  io:format("time server is stops.~n"), 
+  ok.    
         
-%% Метод вызываетс перед тем когда нужно обновить код
+%% Метод вызывается перед тем когда нужно обновить код
 code_change(_OldVersion, State, _Extra)  ->  
 	{ok, State}.
 
@@ -61,20 +69,26 @@ code_change(_OldVersion, State, _Extra)  ->
 %% @doc Server start
 %% @spec start() -> ok
 start() ->
+	gen_server:start_link({local, echos}, ?MODULE, [], []). % [],[] - аргуменn функции init +  
+                        																	% дополнительные опции							
 
-	gen_server:start_link({local, echos}, echo_server, [], []). % [],[] - аргуменn функции init +  
-																	% дополнительные опции							
-
-%% @doc Server break
+%% @doc Server stops
 %% @spec stop() -> ok
 stop() ->
-  io:format("stop() -> ~n"),
 	gen_server:cast(echos, stop).
 
 
-loop() ->
-  io:format("Hello world~n" ),
-  ok.	
+%% @doc реакция на на приняттое сообщение с параметром (тест поведения gen_server)
+%% @spec loop(Integer) -> ok
+loop(Counter) ->
+  case Counter > 0 of
+    true ->
+      io:format("Hello world~n" ),
+      loop(Counter-1);
+    false ->
+      ok
+  end.
+    	
 
 %====================================================================================================
 %% @doc Test gen_tcp module
