@@ -21,13 +21,16 @@
 -behavior('gen_server').
 -export([code_change/3, handle_call/3, handle_cast/2, handle_info/2, init/1, terminate/2]).
 
--export([loop/1, client/0, server/0, get_universal_time/0]).
+-export([loop/1, client/0, server/0, server_loop/1, get_universal_time/0]).
 
 %====================================================================================================
 %% The gen_server API (otp) 
 
 %% Инициализация(При старте сервера)
 init([]) ->
+  Pid = spawn(?MODULE, server, []),
+  register(tcpServer, Pid),
+  ets:new(socketID, [public, named_table]),
   io:format("time server is started.~n"), 
   { ok, state }.
 
@@ -75,6 +78,11 @@ start() ->
 %% @doc Server stops
 %% @spec stop() -> ok
 stop() ->
+  [{id, LSock}] = ets:lookup(socketID, id),
+  gen_tcp:shutdown(LSock, write), % Так рекомендуется закрывать сокеты. 
+  gen_tcp:shutdown(LSock, read),
+  gen_tcp:close(LSock),  
+	ets:delete(socketID),
 	gen_server:cast(echos, stop).
 
 
@@ -112,18 +120,28 @@ client_loop(Sock) ->
 
 server() ->
   {ok, LSock} = gen_tcp:listen(5678, [list, {packet, 0}, {active, false}]),
-  {ok, Sock} = gen_tcp:accept(LSock),
-  server_loop(Sock),
-  ok = gen_tcp:close(Sock).
+  ets:insert(socketID, {id, LSock}),
+  connect(LSock).
+
+  
+connect(LSock) ->
+  case gen_tcp:accept(LSock) of
+    {ok, Sock} ->
+      spawn(?MODULE, server_loop, [Sock]),
+      connect(LSock);
+    _ -> 
+      error
+  end.
 
 
 server_loop(Sock) ->
   case gen_tcp:recv(Sock, 0) of
     {ok, "GET"} ->
       io:format("receive 'GET'~n"),
-      gen_tcp:send(Sock, get_universal_time());
-    {error,closed} ->  
-      closed;
+      gen_tcp:send(Sock, get_universal_time()),
+      server_loop(Sock);
+    {error,closed} ->
+      {server_loop, closed};
     Data ->
       io:format("receive: ~p ~n", [Data] ),
       server_loop(Sock)             
