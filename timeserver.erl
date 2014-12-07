@@ -21,7 +21,7 @@
 -behavior('gen_server').
 -export([code_change/3, handle_call/3, handle_cast/2, handle_info/2, init/1, terminate/2]).
 
--export([loop/1, client/0, server/0, server_loop/1, get_universal_time/0]).
+-export([loop/1, server/0, server_loop/1, get_universal_time/0]).
 
 %====================================================================================================
 %% The gen_server API (otp) 
@@ -99,24 +99,7 @@ loop(Counter) ->
     	
 
 %====================================================================================================
-%% @doc Test gen_tcp module
-
-client() ->
-  {ok, Sock} = gen_tcp:connect("127.0.0.1", 5678, [list, {packet, 0}, {active, false}]),
-  ok = gen_tcp:send(Sock, "GET"),
-  Data = client_loop(Sock),
-  ok = gen_tcp:close(Sock),
-  Data.
-
-
-client_loop(Sock) ->
-  case gen_tcp:recv(Sock, 0) of
-    {ok, Data} ->
-      Data;
-    {error,einval} ->
-      client_loop(Sock)
-  end. 
-
+%% @doc Workers.
 
 server() ->
   {ok, LSock} = gen_tcp:listen(5678, [list, {packet, 0}, {active, false}]),
