@@ -21,7 +21,7 @@
 -behavior('gen_server').
 -export([code_change/3, handle_call/3, handle_cast/2, handle_info/2, init/1, terminate/2]).
 
--export([loop/1, server/0, server_loop/1, get_universal_time/0]).
+-export([server/0, server_loop/1]).
 
 %====================================================================================================
 %% The gen_server API (otp) 
@@ -35,21 +35,12 @@ init([]) ->
   { ok, state }.
 
 %% Обрабатывает забросы требуещие ответа
-handle_call({cmd, getTime}, _From, State) -> 
-  Time = get_universal_time(),
-	{reply, Time,  State};
-	
 handle_call(Msg, _From, State) -> 
 	{reply, Msg,  State}.
 
 %% обрабатывает забросы НЕ требуещие ответа
 handle_cast(stop, State) -> 
     {stop, normal, State};
-
-handle_cast({cmd, loop, Counter}, State) -> 
-    loop(Counter),
-    {noreply, State};
-
 handle_cast(_Msg, State) -> 
 	{noreply, State}.
 
@@ -72,7 +63,7 @@ code_change(_OldVersion, State, _Extra)  ->
 %% @doc Server start
 %% @spec start() -> ok
 start() ->
-	gen_server:start_link({local, echos}, ?MODULE, [], []). % [],[] - аргуменn функции init +  
+	gen_server:start_link({local, timeserver}, ?MODULE, [], []). % [],[] - аргуменn функции init +  
                         																	% дополнительные опции							
 
 %% @doc Server stops
@@ -85,18 +76,6 @@ stop() ->
 	ets:delete(socketID),
 	gen_server:cast(echos, stop).
 
-
-%% @doc реакция на на приняттое сообщение с параметром (тест поведения gen_server)
-%% @spec loop(Integer) -> ok
-loop(Counter) ->
-  case Counter > 0 of
-    true ->
-      io:format("Hello world~n" ),
-      loop(Counter-1);
-    false ->
-      ok
-  end.
-    	
 
 %====================================================================================================
 %% @doc Workers.
@@ -121,7 +100,7 @@ server_loop(Sock) ->
   case gen_tcp:recv(Sock, 0) of
     {ok, "GET"} ->
       io:format("receive 'GET'~n"),
-      gen_tcp:send(Sock, get_universal_time()),
+      gen_tcp:send(Sock, gen_server:call(calendar, {cmd, getTime})),
       server_loop(Sock);
     {error,closed} ->
       {server_loop, closed};
@@ -129,20 +108,4 @@ server_loop(Sock) ->
       io:format("receive: ~p ~n", [Data] ),
       server_loop(Sock)             
   end.
-
-
-%% @doc Test functions get_time
-%% This function returns the Universal Coordinated Time (UTC) reported by the
-%% underlying operating system. Local time is returned if universal
-%% time is not available.
-%% Example returned data: "2013-11-5_9:42:10"
-
-get_universal_time() -> 
-  DateTime=calendar:universal_time(),
-  {Date,Time} = DateTime,
-  {Year,Month,Day} = Date,
-  {Hours,Minutes,Seconds} = Time,
-  integer_to_list(Year) ++ "-" ++ integer_to_list(Month) ++ "-" ++ 
-  integer_to_list(Day) ++ "_" ++ integer_to_list(Hours) ++ ":" ++ 
-  integer_to_list(Minutes) ++ ":" ++ integer_to_list(Seconds).
 
