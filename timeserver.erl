@@ -9,7 +9,7 @@
 %% 
 
 -module(timeserver).
--export([start/0, stop/0]).
+-export([start/0, start_link/0, stop/0]).
 
 -revision('Revision: 0.1 ').
 -created('Date: 20/07/2012 17:44:57 ').
@@ -22,6 +22,7 @@
 -export([code_change/3, handle_call/3, handle_cast/2, handle_info/2, init/1, terminate/2]).
 
 -export([server/0, server_loop/1]).
+
 
 %====================================================================================================
 %% The gen_server API (otp) 
@@ -64,10 +65,16 @@ code_change(_OldVersion, State, _Extra)  ->
 %% @spec start() -> ok
 start() ->
 	gen_server:start_link({local, timeserver}, ?MODULE, [], []). % [],[] - аргуменn функции init +  
+
+
+%% @doc Server start
+%% @spec start_link() -> {ok, Pid}
+start_link() ->
+  gen_server:start_link({local, timeserver}, ?MODULE, [], []).
                         																	% дополнительные опции							
 
 %% @doc Server stops
-%% @spec stop() -> ok
+%% @spec stop() -> {ok, Pid}
 stop() ->
   [{id, LSock}] = ets:lookup(socketID, id),
   gen_tcp:shutdown(LSock, write), % Так рекомендуется закрывать сокеты. 

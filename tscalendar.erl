@@ -6,7 +6,7 @@
 %% 
 
 -module(tscalendar).
--export([start/0, stop/0]).
+-export([start/0, start_link/0, stop/0]).
 
 -revision('Revision: 0.1 ').
 -created('Date: 09.12.2014 21:20:09 ').
@@ -17,6 +17,7 @@
 
 -behavior('gen_server').
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+
 
 %====================================================================================================
 %% The gen_server API (otp) 
@@ -57,9 +58,15 @@ code_change(_OldVersion, State, _Extra)  ->
 %% The server API 
 
 %% @doc Server start
-%% @spec start() -> ok
+%% @spec start() -> {ok, Pid}
 start() ->
 	gen_server:start_link({local, calendar}, ?MODULE, [], []). % [],[] - аргуменn функции init +  
+
+
+%% @doc Server start
+%% @spec start_link() -> {ok, Pid}
+start_link() ->
+  gen_server:start_link({local, calendar}, ?MODULE, [], []).
                         																	% дополнительные опции							
 
 %% @doc Server stops
