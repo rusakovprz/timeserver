@@ -9,7 +9,7 @@
 
 -behavior('supervisor').
 
--export([start_link/0, init/1]).
+-export([start_link/0, init/1, stop/0]).
 
 
 %====================================================================================================
@@ -21,10 +21,14 @@ start_link() ->
 
 init(_FileName) ->
   Transport = {transp, {timeserver, start_link, []},
-              permanent, 2000, worker, [timeserver]},
+              transient, 2000, worker, [timeserver]},
   Calendar = {cal, {tscalendar, start_link, []},
-              permanent, 2000, worker, [tscalendar]},
+              transient, 2000, worker, [tscalendar]},
   {ok, {{one_for_all, 1, 1}, [Transport, Calendar]}}.
 
 
+stop() ->
+  tscalendar:stop(),
+  timeserver:stop(),
+  exit(whereis(?MODULE), shutdown).
 

@@ -51,7 +51,12 @@ handle_info(_Msg, State) ->
 
 %% вызывается когда супервайзер "просит" модуль остановиться
 terminate(_Reason, _State) ->
-  io:format("time server is stops.~n"), 
+  io:format("time server is stops.~n"),
+  [{id, LSock}] = ets:lookup(socketID, id),
+  gen_tcp:shutdown(LSock, write), % Так рекомендуется закрывать сокеты. 
+  gen_tcp:shutdown(LSock, read),
+  gen_tcp:close(LSock),  
+	ets:delete(socketID), 
   ok.    
         
 %% Метод вызывается перед тем когда нужно обновить код
@@ -76,11 +81,6 @@ start_link() ->
 %% @doc Server stops
 %% @spec stop() -> {ok, Pid}
 stop() ->
-  [{id, LSock}] = ets:lookup(socketID, id),
-  gen_tcp:shutdown(LSock, write), % Так рекомендуется закрывать сокеты. 
-  gen_tcp:shutdown(LSock, read),
-  gen_tcp:close(LSock),  
-	ets:delete(socketID),
 	gen_server:cast(echos, stop).
 
 
